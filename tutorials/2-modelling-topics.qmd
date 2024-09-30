@@ -85,6 +85,10 @@ set_style()
 nlp = spacy.load("en_core_web_sm")
 ```
 
+Small english model from spacy.
+It starts with ! as it will run the line in the terminal.
+nlp is our text processing object to use later in the code.
+
 # The British Hansard
 
 For the first part of this tutorial, we'll work with a collection of political speeches from the British Parliament, focusing on speeches given between 2016 and 2020. We'll load the data using the command line utility wget. 
@@ -101,6 +105,7 @@ For the first part of this tutorial, we'll work with a collection of political s
 > Now you can load the data from `input/` using the code block below.
 
 Alternatively, you can run it in a Quarto Python cell starting with `!`.
+!get command line utility that takes a file from the url that you give and save it into the input directory of the container.
 
 ```{python}
 !wget -O "input/bh2016.csv" "https://www.dropbox.com/scl/fi/c9d1aqzrage1juf276nvd/british_hansard_2016.csv?rlkey=ilyn06y4hw4jocr4fhq6w6olk&st=ioslogzq&dl=1"
@@ -114,6 +119,10 @@ Alternatively, you can run it in a Quarto Python cell starting with `!`.
 !wget -O "input/bh2020.csv" "https://www.dropbox.com/scl/fi/60wxtrzibbnk1ck3i9x6f/british_hansard_2020.csv?rlkey=o2c6aq8b6ofmwd96b0t81jywz&st=k889sge3&dl=1"
 ```
 
+Collection of political speeches from the British parliament.
+
+f string embeds a variable into a string. Automatically create names of files.
+
 ```{python}
 dfs = []
 for year in [2016, 2017, 2018, 2019, 2020]:
@@ -126,17 +135,20 @@ bh1620.reset_index()
 bh1620
 ```
 
+Each row in the dataframe is a political speech.
+
 ```{python}
 # bh1620 = icsspy.load_hansard(years=["2016-2020"], british=True)
 
 bh1620.info()
 ```
 
-The data subset we are working with contains `{python} len(bh1620)` speeches.
+British=true because Canadian english is also in the package. The data subset we are working with contains `{python} len(bh1620)` speeches.
 
 ## Data Processing
 
 Let's confirm that we have the correct years.
+Data is available since the 1970s.
 
 ```{python}
 bh1620['year'].min(), bh1620['year'].max()
@@ -150,7 +162,7 @@ bh1620.dropna(subset=['party', 'speakername', 'speech'], inplace=True)
 bh1620.info()
 ```
 
-Dropping missing data leaves us with `{python} len(bh1620)` speeches.
+Dropping missing data leaves us with `{python} len(bh1620)` speeches. Over 300000 speeches.
 
 ## Party Breakdown
 
@@ -171,7 +183,7 @@ parties_keep = [
     'Liberal Democrat',
     'Democratic Unionist Party',
     'Plaid Cymru',
-    'Green Party'
+    'Green Party', 'Social Democratic & Labour Party'
 ]
 
 party_subset = bh1620[bh1620['party'].isin(parties_keep)].copy()
@@ -184,6 +196,7 @@ total_speech_counts
 ### Stratified Random Sample of Political Speeches
 
 Given the size of the dataset, you may want to work with a smaller sample. We can draw a **stratified random sample** where the strata are political parties so that that each party is proportionally represented in our sample.
+We take a 10% sample: percent computed over speeches for each party.
 
 ```{python}
 sample_size_fraction = 0.1  # let's just take 10% for now
@@ -214,6 +227,7 @@ sample_sizes
 ### Speech Length by Party
 
 Let's compare the length of speeches across political parties by computing the number of tokens in each speech.
+We want to assess if very short speeches are still counted as such.
 
 ```{python}
 sampled_speeches['speech_len'] = sampled_speeches['speech'].apply(
@@ -225,6 +239,7 @@ parties['speech_len'].median()
 ```
 
 We can visualize party differences by plotting the kernel density estimate for speech length within each party.
+With apply go through strings and then group them by party, count the number of words spoken by each party and compare them.
 
 ```{python}
 def party_subplot(subgroup, title, position):
@@ -232,7 +247,7 @@ def party_subplot(subgroup, title, position):
                 log_scale=True, fill=False, alpha=1, linewidth=3, color='C0')
     position.set(xlabel='Number of tokens (log scale)', title=title)
 
-fig, ax = plt.subplots(2, 4, sharex=True, sharey=True, figsize=(20, 6))
+fig, ax = plt.subplots(3, 4, sharex=True, sharey=True, figsize=(20, 6))
 party_subplot(parties.get_group('Conservative'), 'Conservative', ax[0, 0])
 party_subplot(parties.get_group('Labour'), 'Labour', ax[0, 1])
 party_subplot(parties.get_group('Scottish National Party'), 'Scottish National Party', ax[0, 2])
@@ -241,6 +256,7 @@ party_subplot(parties.get_group('Liberal Democrat'), 'Liberal Democrat', ax[1, 0
 party_subplot(parties.get_group('Democratic Unionist Party'), 'Democratic Unionist Party', ax[1, 1])
 party_subplot(parties.get_group('Plaid Cymru'), 'Plaid Cymru', ax[1, 2])
 party_subplot(parties.get_group('Green Party'), 'Green Party', ax[1, 3])
+party_subplot(parties.get_group('Social Democratic & Labour Party'), 'Social Democratic & Labour Party', ax[2, 0])
 
 plt.tight_layout()
 plt.savefig('output/speech_length_by_party.png', dpi=300)
@@ -248,7 +264,7 @@ plt.savefig('output/speech_length_by_party.png', dpi=300)
 
 ## Text Processing
 
-Text processing is a crucial step before applying the kinds of text analysis techniques we will apply here.^[This is not the case for the transformer-based approaches we will consider later.] Common steps include removing stopwords, converting to lowercase, lemmatization, and detecting bigrams. We will use the preprocess() function from the course package to perform these operations.
+Text processing is a crucial step before applying the kinds of text analysis techniques we will apply here.^[This is not the case for the transformer-based approaches we will consider later.] Common steps include removing stopwords, converting to lowercase, lemmatization, and detecting bigrams (e.g., climate change, european union) --> train the model to check for more frequent pairings and treat them as one word (different meaning from words used alone). We will use the preprocess() function from the course package to perform these operations.
 
 Note that the code block below will take some time to run, primarily because of the bigram detection. You'll see several progress bars appear (one at a time) to give you a sense of how long this code needs to run on your machine.
 
@@ -279,6 +295,7 @@ We now have two Series with text data: the original full speech text and the pro
 ## Creating a Document-Term Matrix
 
 Creating a document-term matrix (DTM) is the first step in many text analysis workflows. It allows us to represent our text data in a structured format where each document is represented as a vector of word counts or TF-IDF scores.
+It is a quantitative representation and we use a function from sklearn.
 
 ```{python}
 count_vectorizer = CountVectorizer(
@@ -300,6 +317,7 @@ Now that we've processed our data, let's start digging into topic modeling, star
 ## Counting and Comparing Manifest Content
 
 We can start by exploring simple count-based methods and difference of proportions analysis. This provides a foundation for understanding more complex topic models.
+Compare how often some words are used by each party.
 
 ```{python}
 count_data = pd.DataFrame.sparse.from_spmatrix(count_matrix)
@@ -318,7 +336,7 @@ results_t = results.T
 results_t.sample(20, random_state=10061986)
 ```
 
-With this dataframe, we can compare the proportions of specific tokens across each party.
+With this dataframe, we can compare the proportions of specific tokens across each party. Unsurprisingly, the SNP uses 'scotland' most often.
 
 ```{python}
 search_term = 'scotland'
@@ -357,6 +375,8 @@ Each dot represents a word, and its position on the x-axis indicates the extent 
 
 Try running this analysis this with other search terms!
 
+This is all counting and comparing things at a manifest level. Nothing is done at the latent level.
+
 # First Wave Topic Models: Latent Semantic Analysis (LSA)
 
 Latent Semantic Analysis (LSA) is an early method for uncovering latent structures in text data. It uses dimensionality reduction methods -- specifically truncated Singular Value Decomposition (SVD) -- to decompose a (normalized) term-document matrix into a set of orthogonal components that are interpreted as latent topics.^[Why TF-IDF and normalization for LSA? LSA works by decomposing the term-document matrix (often a TF-IDF matrix) into a set of orthogonal factors, each of which represents a latent semantic dimension. By normalizing the TF-IDF matrix (e.g., applying L2 normalization to each document vector, as we have here), we make sure that each document contributes equally to the latent space, which is useful when there is variation in document lengths (which we saw in our data processing step). This improves the interpretability of the resulting semantic dimensions.] First, let's create a TF-IDF matrix, which, to oversimplify things, weights word counts by how common they are across documents.
@@ -370,6 +390,9 @@ tfidf_matrix.shape
 ```
 
 In LSA, it's common practice to normalize the TF-IDF matrix. We'll do that too.
+tfidf (term frequency inverse document frequency) instead of a count factorizer. We also normalize the matrix, as is typically done.
+
+Normalization is a step that is typical of LSAs --> it is needed to obtain optimized content for longer speeches.
 
 ```{python}
 normalize = Normalizer()
@@ -383,7 +406,7 @@ lsa = TruncatedSVD(n_components=100, n_iter=6, random_state=12)
 lsa = lsa.fit(tfidf_normalized_l2) # instead of the unnormalized tfidf_matrix
 ```
 
-We can inspect the singular values to understand the importance of each latent dimension.
+We can inspect the singular values to understand the importance of each latent dimension (weights if each word).
 
 ```{python}
 svs = lsa.singular_values_[:20]
@@ -404,6 +427,7 @@ word_topics.sort_values(by='Topic 2', ascending=False)['Topic 2'].head(20)
 ```
 
 We can also compare the topic distributions for specific terms.
+The matrix decomposition takes every word in the dataset under different topics. We can then compare how each word goes under the different topics.
 
 ```{python}
 compare_df = pd.DataFrame()
@@ -443,14 +467,25 @@ plt.show()
 ```
 
 - Interpreting these plots involves understanding the association between each term and the latent topics identified by the LSA model.
+Loadings for each word under each latent topic.
+Next step: top weighted words for each topic; search for other words you are interested in.
+LSA is a deterministic method. It will yield the same results every time you run it.
 
 # Second Wave Topic Models: Latent Dirichlet Allocation (LDA)
 
 Latent Dirichlet Allocation (LDA) is a probabilistic model that treats documents as mixtures of topics and topics as mixtures of words. This allows for a more flexible and nuanced understanding of thematic structures in text data compared to deterministic models like LSA.
+They use a generative language model, that takes speeches from people and completes them.
+
+LDAs model a data generating process using a probabilistic model.
+
+LDAs assume that there are latent topics that affect the way that words appear in documents in relation to one another.
 
 Unlike with LSA, we **don't** want to use a TF-IDF matrix, and we don't want to do any normalization. The reason is because LDA is a fully Bayesian generative model, and transforming the count data conflicts with the model's priors; by breaking with assumptions about the data generating process, we end up with less interpretable results.
 
 Let's start by creating a corpus vocabulary with Gensim.
+We only give LDA a bag of words with counts --> count-based representation without any other information on the words.
+dock2bow== dock to bag of words. It is another way of having stopwords out.
+In topic modelling, there is no way of understanding how many topics are in a dataset --> use num_topics.
 
 ```{python}
 sampled_speeches['processed_text_tokenized'] = sampled_speeches['processed_text'].apply(lambda x: x.split())
@@ -461,7 +496,7 @@ vocab.filter_extremes(no_below=20, no_above=0.95)
 corpus = [vocab.doc2bow(text) for text in sampled_speeches['processed_text_tokenized']]
 ```
 
-Next, we'll fit an LDA model to our data.
+Next, we'll fit an LDA model to a sample of our data (1000 data). Small sample to get this loading in a smaller amount of time.
 
 ```{python}
 corpus_sample_size = 1_000
@@ -485,9 +520,13 @@ ldamod_s = LdaModel(
 
 We can now explore the topics identified by the LDA model.
 
+Freedom is not in the speeches.
+
 ```{python}
 ldamod_s.get_term_topics('freedom')
 ```
+
+Select topics to look at and have a probabilistic assignment of words to those topics.
 
 ```{python}
 ldamod_s.show_topic(77)
@@ -497,17 +536,27 @@ ldamod_s.show_topic(77)
 ldamod_s.get_term_topics('scotland')
 ```
 
+Look at topics with scotland in it.
+
 ```{python}
-ldamod_s.show_topic(44, topn=10)
+ldamod_s.show_topic(6, topn=10)
 ```
 
 ```{python}
-ldamod_s.show_topic(47, topn=10)
+ldamod_s.show_topic(33, topn=10)
 ```
 
 ```{python}
-ldamod_s.show_topic(48, topn=10)
+ldamod_s.show_topic(69, topn=10)
 ```
+
+```{python}
+ldamod_s.show_topic(91, topn=10)
+```
+
+These objects are all tuples. The first item is an id for a topic.
+You can search topics and do searches of the topics to find the most strongly associated words.
+In this generation of topic models, typically there is a combination of quantitative modelling and more qualitative variables.
 
 # Third Wave Topic Models: Transformer-based
 
@@ -515,12 +564,28 @@ Transformers have revolutionized natural language processing in general, and top
 
 Unlike the models we've run so far, transformers are almost always at their best with unprocessed data. So, let's return to our unprocessed text data for this example.
 
+This kind of model also performs contextual embeddings.
+Embeddings are basically the elements of matrixes.
+Word embeddings condense the representation of the world.
+You can also do mathematical operations on vectors (e.g., subtract man from king and get queen).
+Still, they only have one meaning.
+Contextual embeddings look at words around the word of interest and count for different embeddings.
+This takes an enormous amount of data and of energy to run.
+OS models examples: BERT, LAMA.
+These can be trained and you can interact with them, through transformer-based models.
+They are not specialised models, but have general knowledge.
+They then need to be finetuned into tasks that we need.
+BERTopic uses BERT for topic analysis.
+
 ```{python}
 docs = sampled_speeches['speech']
 
 topic_model = BERTopic()
 topics, probs = topic_model.fit_transform(docs)
 ```
+
+Data need not be preprocessed in this case. Use 'speech' and not only a sample.
+The output is twofold: topics and probs.
 
 ## Topic Assignments and Probabilities
 
@@ -547,6 +612,8 @@ topic_model.get_topic(0)
 ## Topic Information
 
 Let's retrieve and explore information about the topics identified by the model.
+Using BERTopic functions.
+BERT uses the best possible representation for that data:
 
 ```{python}
 topic_info = topic_model.get_topic_info()
@@ -558,18 +625,22 @@ for i in range(len(topic_info)):
     print(f'Topic {i}: {topic_model.get_topic(i)}')
 ```
 
+keyword --> uses representations through keywords.
+-1 ist the only topic number that has meaning, and it indicates junk topics.
+
 ```{python}
 topic_info
 ```
 
 ## Document Info
 
-Finally, we can get information about how documents are classified into topics.
+Finally, we can get information about how documents are classified into topics through a BERTopic function.
 
 ```{python}
 topic_model.get_document_info(docs)
 ```
 
+Information of most probable information in some topics.
 We can also visualize the distribution of topics **per document**. BERTopic has a function to do this, `visualize_distribution()`. To see the topic distribution for the first document in our corpus,
 
 ```{python}
@@ -577,6 +648,7 @@ topic_distr, _ = topic_model.approximate_distribution(sampled_speeches["speech"]
 topic_model.visualize_distribution(topic_distr[0])
 ```
 
+Full information on BERTopic are available in the website.
 While this is very handy, I'm a bit fastidious when it comes to plotting and... I don't love it. I developed an alternative function, `plot_topic_distribution()` that you might prefer.
 
 ```{python}
@@ -597,7 +669,7 @@ df.info()
 We need to do a bit of data prep to create the text text we'll use and removing some irrelevant characters. We'll store the result in a column called `processed_text`.
 
 ```{python}
-import icsspy.cleaners as clean
+import src.cleaners as clean
 
 metadata_keep = ["snippet.channeltitle" "id", "snippet.title", "contentdetails.licensedcontent", "status.privacystatus", "status.license", "status.publicstatsviewable", "statistics.viewcount", "statistics.likecount", "statistics.favoritecount", "statistics.commentcount"]
 remove_substrings = []

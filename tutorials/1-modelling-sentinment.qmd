@@ -59,6 +59,7 @@ import requests
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
+!python -m spacy download en_core_web_sm  # shell
 nlp = spacy.load("en_core_web_sm")
 ```
 
@@ -171,7 +172,7 @@ Let's try another approach. This time, one that combines a dictionary approach w
 # The Second Approach: VADER (Dictionaries + Rules)
 
 VADER (Valence Aware Dictionary and sEntiment Reasoner) is a more sophisticated sentiment analysis tool that combines a dictionary-based approach with a rule-based method to better capture context, negation, and intensifiers in text. We'll start by importing VADER and initializing the `SentimentIntensityAnalyzer`.
-
+Need to pip install vaderSentiment first!
 ```{python}
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 analyzer = SentimentIntensityAnalyzer()
@@ -278,6 +279,8 @@ sentiment[['sentiment_negative', 'sentiment_neutral', 'sentiment_positive', 'dom
 ```
 
 Let's plot a comparison. We could do this as a bar graph (or whatever), but I prefer to do it this way:
+
+Need to pip install src first!
 
 ```{python}
 from src.networks import plot_line_comparison
